@@ -4,7 +4,6 @@ export const ENDPOINTS = {
   AUTH: {
     REGISTER: '/api/auth/register',
     LOGIN: '/api/auth/login',
-    LOGOUT: '/api/auth/logout',
     GET_CURRENT_USER: '/api/auth/me',
   },
   // Chat endpoints

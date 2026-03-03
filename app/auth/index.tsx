@@ -1,8 +1,8 @@
-
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +15,9 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ENDPOINTS } from "../services/api/endpoints";
+import API from "../services/api/method";
 
 const { width, height } = Dimensions.get("window");
 
@@ -70,12 +73,30 @@ export default function Index() {
 
     setIsLoading(true);
     
-    // Simulate login API call
-    setTimeout(() => {
+    try {
+      // Call the login API
+      const loginResponse = await API.post(ENDPOINTS.AUTH.LOGIN, {
+        email: email,
+        password: password,
+      });
+      
+      // Store the token and user in AsyncStorage
+      await AsyncStorage.setItem("token", loginResponse.token);
+      await AsyncStorage.setItem("user", JSON.stringify(loginResponse.user));
+      
       setIsLoading(false);
+      
       // Navigate to home on success
       router.replace("/main/home");
-    }, 1500);
+    } catch (error: any) {
+      setIsLoading(false);
+      
+      // Show error message
+      Alert.alert(
+        "Login Failed",
+        error.message || "An error occurred during login. Please try again."
+      );
+    }
   };
 
   const handleSignUp = () => {

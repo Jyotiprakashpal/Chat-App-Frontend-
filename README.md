@@ -1,1 +1,44 @@
-# Chat-App-Frontend-
+# Chat-App-Frontend strcture
+
+chat-app/
+│
+├── app/
+│   ├── _layout.js
+│   │
+│   ├── (auth)/
+│   │   ├── login.js
+│   │   └── register.js
+│   │
+│   ├── (main)/
+│   │   ├── home.js
+│   │   └── chat/[id].js
+│
+├── context/
+│   └── AuthContext.js
+│
+├── services/
+│   ├── api.js
+│   └── socket.js
+│
+└── utils/
+    └── storage.js
+
+
+
+# online strcture 
+
+User opens app
+      ↓
+Socket connects
+      ↓
+Backend stores userId in memory
+      ↓
+User is ONLINE
+
+User closes app / logout
+      ↓
+Socket disconnects
+      ↓
+Remove user from memory
+      ↓
+User is OFFLINE

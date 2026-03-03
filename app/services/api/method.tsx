@@ -72,32 +72,17 @@ const fetchWithAuth = async (
 
 // API methods object
 export const API = {
-  /**
-   * POST request - for creating resources
-   * @param endpoint - API endpoint (e.g., '/auth/register')
-   * @param data - Request body data
-   * @returns Promise with response data
-   */
+
   post: async (endpoint: string, data: any): Promise<any> => {
     return fetchWithAuth(endpoint, "POST", data);
   },
 
-  /**
-   * GET request - for retrieving resources
-   * @param endpoint - API endpoint (e.g., '/user/profile')
-   * @param params - Optional query parameters
-   * @returns Promise with response data
-   */
+
   get: async (endpoint: string, params?: Record<string, string>): Promise<any> => {
     return fetchWithAuth(endpoint, "GET", undefined, params);
   },
 
-  /**
-   * PUT request - for updating resources
-   * @param endpoint - API endpoint (e.g., '/user/profile')
-   * @param data - Request body data
-   * @returns Promise with response data
-   */
+  
   put: async (endpoint: string, data: any): Promise<any> => {
     return fetchWithAuth(endpoint, "PUT", data);
   },
