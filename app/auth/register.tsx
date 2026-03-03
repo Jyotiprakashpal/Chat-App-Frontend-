@@ -15,7 +15,8 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import API from "../services/api";
+import { ENDPOINTS } from "../services/api/endpoints";
+import API from "../services/api/method";
 
 const { width } = Dimensions.get("window");
 
@@ -35,6 +36,7 @@ export default function Register() {
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [termsError, setTermsError] = useState("");
+  
   
   const router = useRouter();
 
@@ -120,10 +122,8 @@ export default function Register() {
     setIsLoading(true);
     
     try {
-      // Call the registration API
-      // Note: Using '/auth/register' because api.tsx BASE_URL already includes '/api'
-      // So we avoid double /api by not using ENDPOINTS.AUTH.REGISTER which is '/api/auth/register'
-      const response = await API.post('/auth/register', {
+      // Call the registration API using ENDPOINTS
+      const response = await API.post(ENDPOINTS.AUTH.REGISTER, {
         username: name,
         email: email,
         password: password,
@@ -140,8 +140,13 @@ export default function Register() {
             text: "OK",
             onPress: () => router.push("/auth"),
           },
-        ]
+        ]            
       );
+      // ✅ RESET FIELDS HERE
+      setName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
     } catch (error: any) {
       setIsLoading(false);
       

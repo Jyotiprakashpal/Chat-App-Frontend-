@@ -1,16 +1,15 @@
 import { useRouter } from "expo-router";
 import { useContext, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { AuthContext } from "../context/Authcontext";
-import API from "../services/api";
-
+import API from "../services/api/method";
 interface User {
   _id: string;
   name: string;
