@@ -18,3 +18,5 @@ export const ENDPOINTS = {
     GET_USERS: '/api/auth/users',
   },
 };
+
+export default ENDPOINTS;

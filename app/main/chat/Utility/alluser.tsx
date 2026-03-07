@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -21,15 +20,24 @@ interface User {
   email: string;
 }
 
+interface SelectedUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface AllUserModalProps {
   visible: boolean;
   onClose: () => void;
+  onUserSelect: (user: SelectedUser) => void;
 }
 
-export default function AllUserModal({ visible, onClose }: AllUserModalProps) {
-  const router = useRouter();
-  const { user: authUser } = React.useContext(AuthContext);
-  
+export default function AllUserModal({ 
+  visible, 
+  onClose, 
+  onUserSelect 
+}: AllUserModalProps) {
+  const { user: authUser } = useContext(AuthContext);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
 
@@ -40,29 +48,45 @@ export default function AllUserModal({ visible, onClose }: AllUserModalProps) {
       const res = await API.get(ENDPOINTS.USER.GET_USERS);
       console.log("Users response:", res);
       
-      let usersList = [];
+      let usersList: User[] = [];
       if (Array.isArray(res)) {
         usersList = res;
-      } else if (res && Array.isArray(res.data)) {
+      } else if (res && typeof res === 'object' && Array.isArray(res.data)) {
         usersList = res.data;
-      } else if (res && Array.isArray(res.users)) {
+      } else if (res && typeof res === 'object' && Array.isArray(res.users)) {
         usersList = res.users;
       }
       
       console.log("Users list before filter:", usersList);
       
+      // Normalize users (ensure name is always string)
       const normalizedUsers = usersList.map((user: User) => ({
         ...user,
-        name: user.name || user.username || "",
+        name: (user.name || user.username || "").toString(),
       }));
       
-      const filteredUsers = normalizedUsers.filter(
-        (user: User) => user.email !== authUser?.email
-      );
+      // ✅ FIXED: Type-safe filtering
+      const filteredUsers = normalizedUsers.filter((user: User) => {
+        // ID check - safe
+        const idMatch = authUser?._id === user._id;
+        
+        // Email check - safe  
+        const emailMatch = authUser?.email === user.email;
+        
+        // Name check - FIXED with safe optional chaining
+        const nameMatch = authUser?.name && user.name && 
+          typeof authUser.name === 'string' && 
+          typeof user.name === 'string' &&
+          user.name.toLowerCase() === authUser.name.toLowerCase();
+        
+        return !idMatch && !emailMatch && !nameMatch;
+      });
+      
+      console.log("Current user (excluded):", authUser);
       console.log("Filtered users:", filteredUsers);
       setAllUsers(filteredUsers);
     } catch (error) {
-      console.log("Error fetching users:", error);
+      console.error("Error fetching users:", error);
       setAllUsers([]);
     } finally {
       setLoadingUsers(false);
@@ -72,15 +96,22 @@ export default function AllUserModal({ visible, onClose }: AllUserModalProps) {
   useEffect(() => {
     if (visible) {
       fetchAllUsers();
+    } else {
+      setAllUsers([]);
     }
   }, [visible]);
 
   const handleUserSelect = (user: User) => {
     onClose();
-    router.push({
-      pathname: "/main/chat/[id]",
-      params: { id: user._id || user.email },
-    });
+    
+    // ✅ Safe user data creation
+    const selectedUser: SelectedUser = {
+      id: user._id || user.email,
+      name: user.name || user.username || "Unknown User",
+      email: user.email
+    };
+    
+    onUserSelect(selectedUser);
   };
 
   return (
@@ -99,40 +130,51 @@ export default function AllUserModal({ visible, onClose }: AllUserModalProps) {
           <View style={styles.usersModalHeader}>
             <Text style={styles.usersModalTitle}>New Chat</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#1E293B" />
+              <Ionicons name="close-outline" size={24} color="#1E293B" />
             </TouchableOpacity>
           </View>
 
           {loadingUsers ? (
             <View style={styles.usersLoader}>
               <ActivityIndicator size="small" color="#4F46E5" />
+              <Text style={styles.loadingText}>Loading users...</Text>
             </View>
           ) : allUsers.length === 0 ? (
             <View style={styles.noUsersContainer}>
-              <Text style={styles.noUsersText}>No users found</Text>
+              {/* <Ionicons name="users-outline" size={48} color="#CBD5E1" /> */}
+              <Text style={styles.noUsersText}>No other users found</Text>
+              <Text style={styles.noUsersSubtext}>Start by creating conversations</Text>
             </View>
           ) : (
             <FlatList
               data={allUsers}
-              keyExtractor={(item) => item._id || item.email}
+              keyExtractor={(item, index) => item._id || item.email || index.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity 
                   style={styles.userItem}
                   onPress={() => handleUserSelect(item)}
+                  activeOpacity={0.7}
                 >
                   <View style={styles.userAvatar}>
                     <Text style={styles.userAvatarText}>
-                      {item.name?.charAt(0).toUpperCase() || "?"}
+                      {item.name && item.name.charAt(0) ? 
+                        item.name.charAt(0).toUpperCase() : "?"}
                     </Text>
+                    <View style={styles.userOnlineDot} />
                   </View>
                   <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{item.name || "Unknown"}</Text>
-                    <Text style={styles.userEmail}>{item.email}</Text>
+                    <Text style={styles.userName} numberOfLines={1}>
+                      {item.name || item.username || "Unknown User"}
+                    </Text>
+                    <Text style={styles.userEmail} numberOfLines={1}>
+                      {item.email}
+                    </Text>
                   </View>
-                  <Ionicons name="chatbubble-outline" size={20} color="#4F46E5" />
+                  <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
                 </TouchableOpacity>
               )}
               showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.usersList}
             />
           )}
         </View>
@@ -158,7 +200,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
@@ -168,16 +211,36 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
   usersLoader: {
-    padding: 50,
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
-  noUsersContainer: {
-    padding: 50,
-    alignItems: "center",
-  },
-  noUsersText: {
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
     color: "#64748B",
+  },
+  noUsersContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 50,
+  },
+  noUsersText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noUsersSubtext: {
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
+  },
+  usersList: {
+    paddingHorizontal: 0,
   },
   userItem: {
     flexDirection: "row",
@@ -195,11 +258,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 14,
+    position: "relative",
   },
   userAvatarText: {
     color: "#fff",
     fontWeight: "600",
     fontSize: 18,
+  },
+  userOnlineDot: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#22C55E",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   userInfo: {
     flex: 1,
