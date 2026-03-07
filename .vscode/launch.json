@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Expo Web (chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8081/",  // Replace with the correct Expo Web URL
+      "webRoot": "${workspaceFolder}",
+      "skipFiles": [
+        "node_modules/**/*.js"
+      ]
+    },
+    {
+      "name": "Debug React Native (Android Only)",
+      "request": "launch",
+      "type": "reactnative",
+      "cwd": "${workspaceFolder}",
+      "platform": "android"
+    }
+  ]
+}

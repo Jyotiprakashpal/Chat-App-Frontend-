@@ -17,7 +17,8 @@ const fetchWithAuth = async (
   endpoint: string,
   method: string,
   data?: any,
-  params?: Record<string, string>
+  params?: Record<string, string>,
+  explicitToken?: string
 ): Promise<any> => {
   try {
     // Build URL with query parameters if provided
@@ -28,8 +29,8 @@ const fetchWithAuth = async (
       url += `?${queryString}`;
     }
 
-    // Get the auth token
-    const token = await getAuthToken();
+    // Get the auth token - use explicit token if provided, otherwise get from storage
+    const token = explicitToken || await getAuthToken();
 
     // Build headers
     const headers: Record<string, string> = {
@@ -73,8 +74,8 @@ const fetchWithAuth = async (
 // API methods object
 export const API = {
 
-  post: async (endpoint: string, data: any): Promise<any> => {
-    return fetchWithAuth(endpoint, "POST", data);
+  post: async (endpoint: string, data: any, token?: string): Promise<any> => {
+    return fetchWithAuth(endpoint, "POST", data, undefined, token);
   },
 
 

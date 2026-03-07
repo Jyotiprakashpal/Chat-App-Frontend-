@@ -9,8 +9,7 @@ export const ENDPOINTS = {
   // Chat endpoints
   CHAT: {
     GET_CONVERSATIONS: '/api/messages/conversations',
-    GET_MESSAGES: '/api/chat/messages',
-    SEND_MESSAGE: '/api/chat/message',
+    MESSAGES: '/api/messages',  // (GET, POST)
   },
   // User endpoints
   USER: {

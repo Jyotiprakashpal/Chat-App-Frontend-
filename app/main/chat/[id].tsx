@@ -1,15 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams } from "expo-router";
 import { useContext, useEffect, useRef, useState } from "react";
 import {
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { AuthContext } from "../../context/Authcontext";
 import API from "../../services/api/method";
@@ -67,20 +68,37 @@ export default function ChatScreen() {
   const handleSend = async () => {
     if (!text.trim() || !user?.email) return;
 
-    const messageData: Message = {
-      _id: Date.now().toString(),
-      senderEmail: user.email,
-      receiverEmail: id as string,
-      text: text.trim(),
-      createdAt: new Date().toISOString(),
+    // Format the message data as required by the MESSAGES endpoint
+    const messageData = {
+      recipient: id as string,
+      content: text.trim(),
     };
-
+    console.log("Sending message data:", messageData);
     try {
-      await API.post("/messages", messageData);
+      // Get the token from AsyncStorage and pass it explicitly
+      const token = await AsyncStorage.getItem("token");
+      
+      // Make the API call with explicit token passing (convert null to undefined)
+      await API.post("/messages", messageData, token ?? undefined);
 
-      socket.emit("sendMessage", messageData);
+      // Also emit via socket for real-time updates
+      socket.emit("sendMessage", {
+        senderEmail: user.email,
+        receiverEmail: id as string,
+        text: text.trim(),
+        createdAt: new Date().toISOString(),
+      });
 
-      setMessages((prev) => [...prev, messageData]);
+      // Add to local messages state for UI update
+      const newMessage: Message = {
+        _id: Date.now().toString(),
+        senderEmail: user.email,
+        receiverEmail: id as string,
+        text: text.trim(),
+        createdAt: new Date().toISOString(),
+      };
+      
+      setMessages((prev) => [...prev, newMessage]);
       setText("");
     } catch (error) {
       console.log("Send error:", error);

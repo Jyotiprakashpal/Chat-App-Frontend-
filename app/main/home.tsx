@@ -4,7 +4,6 @@ import { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   StyleSheet,
   Text,
   TextInput,
@@ -13,8 +12,9 @@ import {
   View
 } from "react-native";
 import { AuthContext } from "../context/Authcontext";
-import { ENDPOINTS } from "../services/api/endpoints";
 import API from "../services/api/method";
+import AllUserModal from "./chat/Utility/alluser";
+import Menu from "./chat/Utility/menu";
 
 interface User {
   _id: string;
@@ -54,10 +54,8 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [profileMenuVisible, setProfileMenuVisible] = useState<boolean>(false);
-  const [usersModalVisible, setUsersModalVisible] = useState<boolean>(false);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState<boolean>(false);
 
+  const [usersModalVisible, setUsersModalVisible] = useState<boolean>(false);
   useEffect(() => {
     fetchCurrentUser();
     fetchConversations();
@@ -68,7 +66,6 @@ export default function Home() {
       const otherParticipant = conv.participants.find(
         (p) => p.email !== authUser?.email
       );
-      // Handle both name and username fields
       const name = otherParticipant?.name?.toLowerCase() || otherParticipant?.username?.toLowerCase() || "";
       const email = otherParticipant?.email?.toLowerCase() || "";
       const searchLower = search.toLowerCase();
@@ -103,58 +100,6 @@ export default function Home() {
     setProfileMenuVisible(false);
     await logout();
     router.replace("/auth");
-  };
-
-  const fetchAllUsers = async () => {
-    try {
-      setLoadingUsers(true);
-      console.log("Fetching users...");
-      const res = await API.get(ENDPOINTS.USER.GET_USERS);
-      console.log("Users response:", res);
-      
-      // Handle different response formats
-      let usersList = [];
-      if (Array.isArray(res)) {
-        usersList = res;
-      } else if (res && Array.isArray(res.data)) {
-        usersList = res.data;
-      } else if (res && Array.isArray(res.users)) {
-        usersList = res.users;
-      }
-      
-      console.log("Users list before filter:", usersList);
-      
-      // Normalize users: map username to name if name is not present
-      const normalizedUsers = usersList.map((user: User) => ({
-        ...user,
-        name: user.name || user.username || "",
-      }));
-      
-      // Filter out current user from the list
-      const filteredUsers = normalizedUsers.filter(
-        (user: User) => user.email !== authUser?.email
-      );
-      console.log("Filtered users:", filteredUsers);
-      setAllUsers(filteredUsers);
-    } catch (error) {
-      console.log("Error fetching users:", error);
-      setAllUsers([]);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  const handleNewChat = async () => {
-    await fetchAllUsers();
-    setUsersModalVisible(true);
-  };
-
-  const handleUserSelect = (user: User) => {
-    setUsersModalVisible(false);
-    router.push({
-      pathname: "/main/chat/[id]",
-      params: { id: user._id || user.email },
-    });
   };
 
   const getOtherParticipant = (conversation: Conversation) => {
@@ -244,12 +189,7 @@ export default function Home() {
           <Ionicons name="menu-outline" size={28} color="#1E293B" />
         </TouchableOpacity>
         <Text style={styles.title}>Chats</Text>
-        <TouchableOpacity 
-          style={styles.newChatButton}
-          onPress={handleNewChat}
-        >
-          <Ionicons name="add" size={28} color="#4F46E5" />
-        </TouchableOpacity>
+        <View style={styles.placeholder} />
       </View>
 
       <View style={styles.searchContainer}>
@@ -272,123 +212,31 @@ export default function Home() {
       ) : (
         <FlatList
           data={filteredConversations}
-          keyExtractor={(item) => item._id || item.participants[0]?._id || String(Math.random()) || ""}
+          keyExtractor={(item) => item._id || item.participants[0]?._id || String(Math.random())}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
         />
       )}
 
-      <Modal
+      <TouchableOpacity 
+        style={styles.fabButton}
+        onPress={() => setUsersModalVisible(true)}
+      >
+        <Ionicons name="chatbubble-ellipses-outline" size={32} color="#fff" />
+      </TouchableOpacity>
+
+      <Menu
         visible={profileMenuVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setProfileMenuVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setProfileMenuVisible(false)}
-        >
-          <View style={styles.profileMenu}>
-            <View style={styles.profileHeader}>
-              <View style={styles.profileAvatar}>
-                <Text style={styles.profileAvatarText}>
-                  {currentUser?.name?.charAt(0).toUpperCase() || "U"}
-                </Text>
-              </View>
-              <Text style={styles.profileName}>
-                {currentUser?.name}
-              </Text>
-              <Text style={styles.profileEmail}>
-                {currentUser?.email}
-              </Text>
-              {currentUser?.status && (
-                <Text style={styles.profileStatus}>
-                  {currentUser.status}
-                </Text>
-              )}
-            </View>
+        currentUser={currentUser}
+        onClose={() => setProfileMenuVisible(false)}
+        onLogout={handleLogout}
+      />
 
-            <View style={styles.menuItems}>
-              <TouchableOpacity style={styles.menuItem}>
-                <Ionicons name="person-outline" size={22} color="#1E293B" />
-                <Text style={styles.menuItemText}>Profile</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.menuItem}>
-                <Ionicons name="settings-outline" size={22} color="#1E293B" />
-                <Text style={styles.menuItemText}>Settings</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={handleLogout}
-              >
-                <Ionicons name="log-out-outline" size={22} color="#EF4444" />
-                <Text style={[styles.menuItemText, styles.logoutText]}>
-                  Logout
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      <Modal
+      <AllUserModal
         visible={usersModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setUsersModalVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.usersModalOverlay}
-          activeOpacity={1}
-          onPress={() => setUsersModalVisible(false)}
-        >
-          <View style={styles.usersModalContent}>
-            <View style={styles.usersModalHeader}>
-              <Text style={styles.usersModalTitle}>New Chat</Text>
-              <TouchableOpacity onPress={() => setUsersModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#1E293B" />
-              </TouchableOpacity>
-            </View>
-
-            {loadingUsers ? (
-              <View style={styles.usersLoader}>
-                <ActivityIndicator size="small" color="#4F46E5" />
-              </View>
-            ) : allUsers.length === 0 ? (
-              <View style={styles.noUsersContainer}>
-                <Text style={styles.noUsersText}>No users found</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={allUsers}
-                keyExtractor={(item) => item._id || item.email}
-                renderItem={({ item }) => (
-                  <TouchableOpacity 
-                    style={styles.userItem}
-                    onPress={() => handleUserSelect(item)}
-                  >
-                    <View style={styles.userAvatar}>
-                      <Text style={styles.userAvatarText}>
-                        {item.name?.charAt(0).toUpperCase() || "?"}
-                      </Text>
-                    </View>
-                    <View style={styles.userInfo}>
-                      <Text style={styles.userName}>{item.name || "Unknown"}</Text>
-                      <Text style={styles.userEmail}>{item.email}</Text>
-                    </View>
-                    <Ionicons name="chatbubble-outline" size={20} color="#4F46E5" />
-                  </TouchableOpacity>
-                )}
-                showsVerticalScrollIndicator={false}
-              />
-            )}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setUsersModalVisible(false)}
+      />
     </View>
   );
 }
@@ -396,68 +244,80 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#F8FAFC",
     paddingTop: 50,
     paddingHorizontal: 16,
   },
   containerLarge: {
-    alignSelf: "center",
-    width: 700,
+    alignSelf: "stretch",
+    width: "100%",
+    maxWidth: "100%",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 24,
+    paddingHorizontal: 4,
   },
   hamburgerButton: {
-    padding: 4,
+    padding: 8,
+    marginRight: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#1E293B",
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#0F172A",
+    letterSpacing: -0.5,
   },
   placeholder: {
     width: 36,
-  },
-  newChatButton: {
-    width: 36,
-    height: 36,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#EEF2FF",
-    borderRadius: 10,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-    height: 45,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+    height: 52,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
   },
   searchInput: {
-    marginLeft: 8,
+    marginLeft: 12,
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
+    color: "#1E293B",
   },
   chatItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     backgroundColor: "#fff",
-    borderRadius: 14,
-    marginBottom: 12,
-    elevation: 2,
+    borderRadius: 16,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   avatar: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#4F46E5",
     justifyContent: "center",
     alignItems: "center",
@@ -466,18 +326,18 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: "#fff",
-    fontWeight: "bold",
-    fontSize: 18,
+    fontWeight: "600",
+    fontSize: 20,
   },
   onlineDot: {
     position: "absolute",
-    bottom: 4,
-    right: 4,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: "#22C55E",
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: "#fff",
   },
   chatInfo: {
@@ -487,42 +347,59 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 4,
   },
   name: {
     fontSize: 17,
     fontWeight: "600",
-    color: "#1E293B",
+    color: "#0F172A",
   },
   time: {
     fontSize: 12,
     color: "#94A3B8",
+    fontWeight: "500",
   },
   lastMessage: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#64748B",
-    marginTop: 3,
   },
   loader: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#F8FAFC",
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingBottom: 60,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
-    color: "#64748B",
-    marginTop: 16,
+    color: "#1E293B",
+    marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: "#94A3B8",
-    marginTop: 4,
+    fontSize: 15,
+    color: "#64748B",
+  },
+  fabButton: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#4F46E5",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#4F46E5",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -534,38 +411,42 @@ const styles = StyleSheet.create({
   },
   profileMenu: {
     backgroundColor: "#fff",
-    borderRadius: 16,
-    width: 280,
+    borderRadius: 20,
+    width: 300,
     overflow: "hidden",
-    elevation: 5,
+    elevation: 8,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
   profileHeader: {
     backgroundColor: "#4F46E5",
-    padding: 20,
+    padding: 24,
     alignItems: "center",
   },
   profileAvatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   profileAvatarText: {
     color: "#4F46E5",
-    fontWeight: "bold",
-    fontSize: 28,
+    fontWeight: "700",
+    fontSize: 32,
   },
   profileName: {
     color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 20,
+    fontWeight: "700",
     marginBottom: 4,
   },
   profileEmail: {
@@ -575,11 +456,11 @@ const styles = StyleSheet.create({
   profileStatus: {
     color: "rgba(255, 255, 255, 0.7)",
     fontSize: 12,
-    marginTop: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    marginTop: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   menuItems: {
     paddingVertical: 8,
@@ -587,13 +468,14 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
   },
   menuItemText: {
     marginLeft: 16,
     fontSize: 16,
     color: "#1E293B",
+    fontWeight: "500",
   },
   logoutText: {
     color: "#EF4444",
@@ -605,30 +487,30 @@ const styles = StyleSheet.create({
   },
   usersModalContent: {
     backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "70%",
-    paddingBottom: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "80%",
+    paddingBottom: 30,
   },
   usersModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
+    padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: "#F1F5F9",
   },
   usersModalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1E293B",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#0F172A",
   },
   usersLoader: {
-    padding: 40,
+    padding: 50,
     alignItems: "center",
   },
   noUsersContainer: {
-    padding: 40,
+    padding: 50,
     alignItems: "center",
   },
   noUsersText: {
@@ -638,32 +520,32 @@ const styles = StyleSheet.create({
   userItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: "#F8FAFC",
   },
   userAvatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#4F46E5",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 14,
   },
   userAvatarText: {
     color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
+    fontWeight: "600",
+    fontSize: 18,
   },
   userInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
-    color: "#1E293B",
+    color: "#0F172A",
   },
   userEmail: {
     fontSize: 13,
