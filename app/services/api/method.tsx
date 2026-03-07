@@ -7,7 +7,6 @@ const getAuthToken = async (): Promise<string | null> => {
     const token = await AsyncStorage.getItem("token");
     return token;
   } catch (error) {
-    console.log("Error getting token:", error);
     return null;
   }
 };
@@ -56,17 +55,25 @@ const fetchWithAuth = async (
     // Make the request
     const response = await fetch(url, fetchOptions);
 
-    // Parse the response
-    const responseData = await response.json();
+    // Get response as text first
+    const responseText = await response.text();
+    
+    // Try to parse as JSON
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      // If not JSON, treat as error message
+      responseData = { message: responseText || "Invalid response format" };
+    }
 
     // Check if response is successful
     if (!response.ok) {
-      throw new Error(responseData.message || "Request failed");
+      throw new Error(responseData.message || `Request failed with status ${response.status}`);
     }
 
     return responseData;
   } catch (error: any) {
-    console.log(`API Error (${method} ${endpoint}):`, error);
     throw error;
   }
 };
@@ -79,8 +86,8 @@ export const API = {
   },
 
 
-  get: async (endpoint: string, params?: Record<string, string>): Promise<any> => {
-    return fetchWithAuth(endpoint, "GET", undefined, params);
+  get: async (endpoint: string, params?: Record<string, string>, token?: string): Promise<any> => {
+    return fetchWithAuth(endpoint, "GET", undefined, params, token);
   },
 
   

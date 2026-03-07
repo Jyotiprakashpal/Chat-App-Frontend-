@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -44,9 +44,7 @@ export default function AllUserModal({
   const fetchAllUsers = async () => {
     try {
       setLoadingUsers(true);
-      console.log("Fetching users...");
       const res = await API.get(ENDPOINTS.USER.GET_USERS);
-      console.log("Users response:", res);
       
       let usersList: User[] = [];
       if (Array.isArray(res)) {
@@ -57,36 +55,14 @@ export default function AllUserModal({
         usersList = res.users;
       }
       
-      console.log("Users list before filter:", usersList);
-      
       // Normalize users (ensure name is always string)
       const normalizedUsers = usersList.map((user: User) => ({
         ...user,
         name: (user.name || user.username || "").toString(),
       }));
       
-      // ✅ FIXED: Type-safe filtering
-      const filteredUsers = normalizedUsers.filter((user: User) => {
-        // ID check - safe
-        const idMatch = authUser?._id === user._id;
-        
-        // Email check - safe  
-        const emailMatch = authUser?.email === user.email;
-        
-        // Name check - FIXED with safe optional chaining
-        const nameMatch = authUser?.name && user.name && 
-          typeof authUser.name === 'string' && 
-          typeof user.name === 'string' &&
-          user.name.toLowerCase() === authUser.name.toLowerCase();
-        
-        return !idMatch && !emailMatch && !nameMatch;
-      });
-      
-      console.log("Current user (excluded):", authUser);
-      console.log("Filtered users:", filteredUsers);
-      setAllUsers(filteredUsers);
+      setAllUsers(normalizedUsers);
     } catch (error) {
-      console.error("Error fetching users:", error);
       setAllUsers([]);
     } finally {
       setLoadingUsers(false);
@@ -149,7 +125,8 @@ export default function AllUserModal({
             <FlatList
               data={allUsers}
               keyExtractor={(item, index) => item._id || item.email || index.toString()}
-              renderItem={({ item }) => (
+              renderItem={({ item }) => {
+                return (
                 <TouchableOpacity 
                   style={styles.userItem}
                   onPress={() => handleUserSelect(item)}
@@ -164,7 +141,7 @@ export default function AllUserModal({
                   </View>
                   <View style={styles.userInfo}>
                     <Text style={styles.userName} numberOfLines={1}>
-                      {item.name || item.username || "Unknown User"}
+                      {item.username}
                     </Text>
                     <Text style={styles.userEmail} numberOfLines={1}>
                       {item.email}
@@ -172,7 +149,8 @@ export default function AllUserModal({
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
                 </TouchableOpacity>
-              )}
+                );
+              }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.usersList}
             />

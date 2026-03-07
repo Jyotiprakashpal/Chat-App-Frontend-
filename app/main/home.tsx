@@ -72,8 +72,8 @@ export default function Home() {
     try {
       const userData = await API.get("/auth/me");
       setCurrentUser(userData.data || userData);
-    } catch (error) {
-      console.log("Error fetching current user:", error);
+  } catch (error) {
+      // Error fetching current user
     }
   }, []);
 
@@ -86,7 +86,7 @@ export default function Home() {
       setConversations(convData);
       setFilteredConversations(convData);
     } catch (error) {
-      console.log("Error fetching conversations:", error);
+      // Error fetching conversations
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -98,7 +98,7 @@ export default function Home() {
       await logout();
       router.replace("/auth");
     } catch (error) {
-      console.log("Logout error:", error);
+      // Logout error
     }
   };
 
@@ -114,7 +114,7 @@ export default function Home() {
         handleLogout();
         break;
       default:
-        console.log(`Navigate to ${action}`);
+        // Navigate to ${action}
         break;
     }
   }, [handleLogout]);

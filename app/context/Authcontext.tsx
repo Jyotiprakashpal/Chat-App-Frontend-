@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useEffect, useState } from "react";
-import { BASE_URL } from "../services/api/baseurl";
 import { ENDPOINTS } from "../services/api/endpoints";
+import API from "../services/api/method";
 
 interface User {
   _id: string;
@@ -37,11 +37,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const token = await AsyncStorage.getItem("token");
       const userData = await AsyncStorage.getItem("user");
       
-      if (token && userData) {
-        setUser(JSON.parse(userData));
+      if (token) {
+        if (userData) {
+          setUser(JSON.parse(userData));
+        } else {
+          // If token exists but no user data, fetch from /me
+          try {
+            const currentUser = await API.get(ENDPOINTS.AUTH.GET_CURRENT_USER);
+            await AsyncStorage.setItem("user", JSON.stringify(currentUser));
+            setUser(currentUser);
+          } catch (error) {
+            // Clear token if /me fails
+            await AsyncStorage.removeItem("token");
+          }
+        }
       }
     } catch (error) {
-      console.log("Error loading user:", error);
     } finally {
       setIsLoading(false);
     }
@@ -49,26 +60,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // Make API call to login endpoint
-      const response = await fetch(`${BASE_URL}${ENDPOINTS.AUTH.LOGIN}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      // Make API call to login endpoint using API method
+      const data = await API.post(ENDPOINTS.AUTH.LOGIN, { email, password });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        await AsyncStorage.setItem("token", data.token);
-        await AsyncStorage.setItem("user", JSON.stringify(data.user));
-        setUser(data.user);
-      } else {
-        throw new Error(data.message || "Login failed");
-      }
+      // Store the token
+      await AsyncStorage.setItem("token", data.token);
+      
+      // Small delay to ensure token is persisted
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Get current user details using the /me endpoint
+      const userData = await API.get(ENDPOINTS.AUTH.GET_CURRENT_USER);
+      
+      // Store the user
+      await AsyncStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
     } catch (error) {
-      console.log("Login error:", error);
       throw error;
     }
   };
@@ -79,7 +86,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await AsyncStorage.removeItem("user");
       setUser(null);
     } catch (error) {
-      console.log("Logout error:", error);
     }
   };
 

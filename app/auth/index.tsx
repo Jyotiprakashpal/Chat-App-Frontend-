@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,9 +15,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ENDPOINTS } from "../services/api/endpoints";
-import API from "../services/api/method";
+import { AuthContext } from "../context/Authcontext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -30,6 +28,7 @@ export default function Index() {
   const [passwordError, setPasswordError] = useState("");
   
   const router = useRouter();
+  const { login } = useContext(AuthContext);
 
   const validateEmail = (text: string) => {
     setEmail(text);
@@ -74,15 +73,8 @@ export default function Index() {
     setIsLoading(true);
     
     try {
-      // Call the login API
-      const loginResponse = await API.post(ENDPOINTS.AUTH.LOGIN, {
-        email: email,
-        password: password,
-      });
-      
-      // Store the token and user in AsyncStorage
-      await AsyncStorage.setItem("token", loginResponse.token);
-      await AsyncStorage.setItem("user", JSON.stringify(loginResponse.user));
+      // Use the AuthContext login function
+      await login(email, password);
       
       setIsLoading(false);
       
@@ -105,7 +97,6 @@ export default function Index() {
 
   const handleForgotPassword = () => {
     // Navigate to forgot password screen
-    console.log("Navigate to Forgot Password");
   };
 
   return (
