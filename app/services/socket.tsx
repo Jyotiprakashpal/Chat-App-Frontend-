@@ -1,8 +1,6 @@
 // Socket service stub - to be implemented with a React Native compatible library
 // socket.io-client has issues with Metro bundler
 
-const SOCKET_URL = "http://localhost:5000";
-
 // Stub socket object
 export const socket = {
   connected: false,
