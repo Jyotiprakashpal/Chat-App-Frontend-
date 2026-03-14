@@ -32,6 +32,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loadUser();
   }, []);
 
+    const login = async (email: string, password: string) => {
+    try {
+      // Make API call to login endpoint using API method
+      console.log('Login API request:', { email, password });
+      const data = await API.post(ENDPOINTS.AUTH.LOGIN, { email, password });
+      console.log('Login API response:', data);
+
+      // Store the token
+      await AsyncStorage.setItem("token", data.token);
+      
+      // Small delay to ensure token is persisted
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Get current user details using the /me endpoint
+      console.log('Me API request for login');
+      const userData = await API.get(ENDPOINTS.AUTH.GET_CURRENT_USER);
+      console.log('Me API response for login:', userData);
+      
+      // Store the user
+      await AsyncStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+      console.log('Login error:', error);
+      throw error;
+    }
+  };
+
   const loadUser = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
@@ -43,7 +70,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else {
           // If token exists but no user data, fetch from /me
           try {
+            console.log('Me API request');
             const currentUser = await API.get(ENDPOINTS.AUTH.GET_CURRENT_USER);
+            console.log('Me API response:', currentUser);
             await AsyncStorage.setItem("user", JSON.stringify(currentUser));
             setUser(currentUser);
           } catch (error) {
@@ -55,28 +84,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const login = async (email: string, password: string) => {
-    try {
-      // Make API call to login endpoint using API method
-      const data = await API.post(ENDPOINTS.AUTH.LOGIN, { email, password });
-
-      // Store the token
-      await AsyncStorage.setItem("token", data.token);
-      
-      // Small delay to ensure token is persisted
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Get current user details using the /me endpoint
-      const userData = await API.get(ENDPOINTS.AUTH.GET_CURRENT_USER);
-      
-      // Store the user
-      await AsyncStorage.setItem("user", JSON.stringify(userData));
-      setUser(userData);
-    } catch (error) {
-      throw error;
     }
   };
 

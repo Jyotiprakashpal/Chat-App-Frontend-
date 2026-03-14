@@ -26,12 +26,14 @@ export default function Index() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [serverError, setServerError] = useState("");
   
   const router = useRouter();
   const { login } = useContext(AuthContext);
 
-  const validateEmail = (text: string) => {
+const validateEmail = (text: string) => {
     setEmail(text);
+    setServerError("");
     if (!text) {
       setEmailError("");
     } else if (!/\S+@\S+\.\S+/.test(text)) {
@@ -41,8 +43,9 @@ export default function Index() {
     }
   };
 
-  const validatePassword = (text: string) => {
+const validatePassword = (text: string) => {
     setPassword(text);
+    setServerError("");
     if (!text) {
       setPasswordError("");
     } else if (text.length < 6) {
@@ -76,18 +79,16 @@ export default function Index() {
       // Use the AuthContext login function
       await login(email, password);
       
+      setServerError("");
       setIsLoading(false);
       
       // Navigate to home on success
-      router.replace("/main/home");
+      router.push("/main/home");
     } catch (error: any) {
       setIsLoading(false);
       
-      // Show error message
-      Alert.alert(
-        "Login Failed",
-        error.message || "An error occurred during login. Please try again."
-      );
+      // Show error message on screen
+      setServerError(error.response?.data?.message || error.message || "An error occurred during login. Please try again.");
     }
   };
 
@@ -183,6 +184,8 @@ export default function Index() {
                 </TouchableOpacity>
               )}
             </View>
+
+            {serverError ? <Text style={styles.errorText}>{serverError}</Text> : null}
 
             {/* Login Button */}
             <TouchableOpacity
